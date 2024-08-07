@@ -7,4 +7,6 @@ include_directories("${PROJECT_SOURCE_DIR}/include")
 
 file(GLOB SOURCES "${PROJECT_SOURCE_DIR}/src/*.c")
 
+set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${PROJECT_SOURCE_DIR})
+
 add_executable(http_server ${SOURCES})
