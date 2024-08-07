@@ -3,7 +3,7 @@ project(http_server C)
 
 set(CMAKE_C_STANDARD 11)
 
-include_directories(${PROJECT_SOURCE_DIR}/include)
+include_directories("${PROJECT_SOURCE_DIR}/include")
 
 file(GLOB SOURCES "${PROJECT_SOURCE_DIR}/src/*.c")
 
