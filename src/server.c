@@ -8,15 +8,116 @@
 #include <stdlib.h>
 #include <unistd.h>
 
-#define PORT 8080
-#define BUFFER_SIZE 256
+/*
+ * This is a server implementation of HTTP/0.9
+ * Headers: none
+ * Request (only GET method supported): "GET /index.html"
+ * Response: <file content>
+*/
+int handle_client_v0_9(const int client_fd) {
+    char buffer[BUFFER_SIZE] = {0};
+    if (recv(client_fd, buffer, BUFFER_SIZE, 0) < 0) {
+        perror("Receive failed");
+        close(client_fd);
+        return -1;
+    }
 
-// Current HTTP version: 0.9 (when testing, specify HTTP/0.9 version)
-int main() {
+    // GET /file.html ...
+    const char *filename = buffer + 5; // file.html ...
+    *strchr(filename, ' ') = 0; // file.html
+
+    char filepath[BUFFER_SIZE] = "www/";
+    strncat(filepath, filename, sizeof(filepath) - strlen(filepath) - 1);
+
+    const int opened_fd = open(filepath, O_RDONLY);
+    if (opened_fd < 0) {
+        perror("File open failed");
+        close(client_fd);
+        return -1;
+    }
+
+    // copy data from opened_fd to client_fd
+    if (sendfile(client_fd, opened_fd, NULL, BUFFER_SIZE) < 0) {
+        perror("Sendfile failed");
+        close(opened_fd);
+        close(client_fd);
+        return -1;
+    }
+
+    printf("File served successfully\n");
+
+    return 0;
+}
+
+/*
+* This is a server implementation of HTTP/1.0
+ * Headers: see https://www.w3.org/Protocols/HTTP/1.0/spec.html#HeaderFields
+ * Request (only GET and POST methods supported): "GET /index.html HTTP/1.0 ..."
+ * Response:
+ *     HTTP/1.0 200 OK
+ *     ...
+ *     Content-Type: text/html
+ *     <file content>
+*/
+int handle_client_v1_0(const int client_fd) {
+    char buffer[BUFFER_SIZE] = {0};
+    if (recv(client_fd, buffer, BUFFER_SIZE, 0) < 0) {
+        perror("Receive failed");
+        close(client_fd);
+        return -1;
+    }
+
+    // GET /file.html ...
+    const char *filename = buffer + 5; // file.html ...
+    *strchr(filename, ' ') = 0; // file.html
+
+    char filepath[BUFFER_SIZE] = "www/";
+    strncat(filepath, filename, sizeof(filepath) - strlen(filepath) - 1);
+
+    const int opened_fd = open(filepath, O_RDONLY);
+    if (opened_fd < 0) {
+        const char *not_found_response = "HTTP/1.0 404 Not Found\r\nContent-Length: 13\r\n\r\n404 Not Found";
+        send(client_fd, not_found_response, strlen(not_found_response), 0);
+        perror("File open failed");
+        close(client_fd);
+        return -1;
+    }
+
+    // Send HTTP/1.0 200 OK response header
+    const char *header = "HTTP/1.0 200 OK\r\n\r\n";
+    send(client_fd, header, strlen(header), 0);
+
+    // copy data from opened_fd to client_fd
+    if (sendfile(client_fd, opened_fd, NULL, BUFFER_SIZE) < 0) {
+        perror("Sendfile failed");
+        close(opened_fd);
+        close(client_fd);
+        return -1;
+    }
+
+    printf("File served successfully\n");
+
+    return 0;
+}
+
+void start_server(const float httpVersion) {
+    if (httpVersion != 0.9f && httpVersion != 1.0f) {
+        printf("Invalid HTTP version selected. Valid options: 0.9, 1.0");
+        return;
+    }
+
     // initialize socket
     const int s = socket(AF_INET, SOCK_STREAM, 0);
     if (s < 0) {
         perror("Socket creation failed");
+        exit(EXIT_FAILURE);
+    }
+
+    // Set socket options
+    const int optval = 1;
+    if (setsockopt(s, SOL_SOCKET, SO_REUSEADDR, &optval, sizeof(optval)) < 0) {
+        perror("Setsockopt failed");
+        close(s);
         exit(EXIT_FAILURE);
     }
 
@@ -27,7 +128,7 @@ int main() {
     };
 
     // bound socket to local address
-    if (bind(s, (struct sockaddr*)&addr, sizeof(addr)) < 0) {
+    if (bind(s, (struct sockaddr *) &addr, sizeof(addr)) < 0) {
         perror("Bind failed");
         close(s);
         exit(EXIT_FAILURE);
@@ -51,43 +152,17 @@ int main() {
         exit(EXIT_FAILURE);
     }
 
-    char buffer[BUFFER_SIZE] = {0};
-    if (recv(client_fd, buffer, BUFFER_SIZE, 0) < 0) {
-        perror("Receive failed");
-        close(client_fd);
-        close(s);
-        exit(EXIT_FAILURE);
+    if (httpVersion == 0.9f) {
+        if (handle_client_v0_9(client_fd) < 0) {
+            close(s);
+            exit(EXIT_FAILURE);
+        }
+    } else if (httpVersion == 1.0f) {
+        if (handle_client_v1_0(client_fd) < 0) {
+            close(s);
+            exit(EXIT_FAILURE);
+        }
     }
 
-    // GET /file.html ...
-    const char *filename = buffer + 5; // file.html ...
-    *strchr(filename, ' ') = 0; // file.html
-
-    char filepath[BUFFER_SIZE] = "www/";
-    strncat(filepath, filename, sizeof(filepath) - strlen(filepath) - 1);
-
-    const int opened_fd = open(filepath, O_RDONLY);
-    if (opened_fd < 0) {
-        perror("File open failed");
-        close(client_fd);
-        close(s);
-        exit(EXIT_FAILURE);
-    }
-
-    // copy data from opened_fd to client_fd
-    if (sendfile(client_fd, opened_fd, NULL, BUFFER_SIZE) < 0) {
-        perror("Sendfile failed");
-        close(opened_fd);
-        close(client_fd);
-        close(s);
-        exit(EXIT_FAILURE);
-    }
-
-    close(opened_fd);
-    close(client_fd);
     close(s);
-
-    printf("File served successfully\n");
-
-    return 0;
 }
