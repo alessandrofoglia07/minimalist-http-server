@@ -180,7 +180,7 @@ int handle_request_v1_1(const int client_fd) {
     size_t chunk_size = BUFFER_SIZE;
 
     while (file_stat.st_size > offset) {
-        const char chunk_header[20];
+        char chunk_header[20];
 
         // Determine chunk size
         if (file_stat.st_size - offset < BUFFER_SIZE) {
