@@ -13,12 +13,12 @@
 
 ## Key Features
 
-* **Supports Multiple HTTP Versions**: Choose between HTTP/0.9, HTTP/1.0, and HTTP/1.1 by specifying the desired version
+* 🚀 **Supports Multiple HTTP Versions**: Choose between HTTP/0.9, HTTP/1.0, and HTTP/1.1 by specifying the desired version
   when starting the server.
-* **Handles GET Requests**: The server processes GET requests and returns the content of the requested file.
-* **Static File Serving**: Serves files located in the `www/` directory, using efficient file handling with `sendfile`.
-* **Error Handling**: Provides appropriate error messages and responses for invalid requests or missing files.
-* **Simple Setup**: Minimal dependencies and easy setup for running and testing the server locally
+* 📄 **Handles GET Requests**: The server processes GET requests and returns the content of the requested file.
+* 📂 **Static File Serving**: Serves files located in the `www/` directory, using efficient file handling with `sendfile`.
+* ⚠️ **Error Handling**: Provides appropriate error messages and responses for invalid requests or missing files.
+* 🛠️ **Simple Setup**: Minimal dependencies and easy setup for running and testing the server locally
 
 ## How To Use
 
